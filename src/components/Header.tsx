@@ -9,6 +9,7 @@ import {
   Download,
   ShieldCheck,
   AlertCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { BusinessLead, LeadStatus } from '../types';
 
@@ -17,6 +18,7 @@ interface HeaderProps {
   activeStatusFilter: LeadStatus | 'ALL';
   onFilterChange: (status: LeadStatus | 'ALL') => void;
   onOpenAddModal: () => void;
+  onOpenImportModal: () => void;
   onOpenValidatorModal: () => void;
   onOpenLeadFinderModal: () => void;
   onOpenKeyModal: () => void;
@@ -30,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeStatusFilter,
   onFilterChange,
   onOpenAddModal,
+  onOpenImportModal,
   onOpenValidatorModal,
   onOpenLeadFinderModal,
   onOpenKeyModal,
@@ -121,6 +124,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button className="btn btn-secondary" onClick={onExportCsv} title="Экспорт контактов в Excel/CSV с поддержкой кириллицы">
             <Download size={15} />
             <span>Экспорт CSV</span>
+          </button>
+
+          <button className="btn btn-secondary" onClick={onOpenImportModal} title="Импорт базы лидов из файлов CSV или Excel (.xlsx)">
+            <FileSpreadsheet size={15} style={{ color: '#059669' }} />
+            <span>Импорт CSV/XLSX</span>
           </button>
 
           <button className="btn btn-secondary" onClick={onOpenKeyModal} title="Настройки API 2GIS">

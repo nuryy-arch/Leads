@@ -59,13 +59,28 @@ export function saveTwoGisApiKey(apiKey: string): void {
 }
 
 /**
- * Determines whether to use Vite proxy or direct 2GIS API URL
+ * Removes the stored 2GIS API key from localStorage
  */
+export function removeTwoGisApiKey(): void {
+  try {
+    localStorage.removeItem(TWO_GIS_STORAGE_KEY);
+  } catch (e) {
+    console.error('Failed to remove 2GIS API key from localStorage', e);
+  }
+}
+
 function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.endsWith('.vercel.app') ||
+      window.location.hostname.includes('cloudflare') ||
+      window.location.port === '5173')
+  ) {
     return '/api/2gis/3.0/items';
   }
-  return 'https://catalog.api.2gis.com/3.0/items';
+  return typeof window !== 'undefined' ? '/api/2gis/3.0/items' : 'https://catalog.api.2gis.com/3.0/items';
 }
 
 /**

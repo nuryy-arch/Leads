@@ -1,5 +1,6 @@
 import type { BusinessLead, DiscoveredCompany, Language } from '../types';
 import { generateWhatsAppLink, getDefaultMessage, createHistoryEvent } from './whatsapp';
+import { calculateLeadScore } from './scoring';
 
 /**
  * Checks whether a company already exists in the CRM leads list
@@ -39,13 +40,31 @@ export function convertDiscoveredToLead(
   lang: Language = 'ru'
 ): BusinessLead {
   const now = new Date().toISOString();
-  const isOsm = company.source === 'OSM';
+  const sourceName = company.source;
+  const sourcesList = company.sources && company.sources.length > 1
+    ? company.sources.map((s) => s.sourceName).join(', ')
+    : sourceName;
 
-  const historyDescription = isOsm
+  const historyDescription = company.sources && company.sources.length > 1
+    ? `Импортировано из объединённых источников: ${sourcesList} (${company.city}). Статус сайта: ${company.websiteStatus}`
+    : company.source === 'OSM'
     ? `Импортировано из OpenStreetMap (${company.city}). Источник: Overpass API. Статус сайта: ${company.websiteStatus}`
-    : `Импортировано из официального каталога 2ГИС (${company.city}). Статус сайта: ${company.websiteStatus}`;
+    : `Импортировано из ${company.source} (${company.city}). Статус сайта: ${company.websiteStatus}`;
 
-  const historyType = isOsm ? 'IMPORTED_FROM_OSM' : 'IMPORTED_FROM_2GIS';
+  const historyType = company.source === 'OSM' ? 'IMPORTED_FROM_OSM' : 'IMPORTED_FROM_2GIS';
+
+  const score = calculateLeadScore({
+    businessName: company.name,
+    category: company.category,
+    phoneRaw: company.phoneRaw,
+    phoneFormatted: company.phoneFormatted,
+    isValidPhone: company.isValidPhone,
+    city: company.city,
+    address: company.address,
+    coordinates: company.coordinates,
+    websiteStatus: company.websiteStatus,
+    source: company.source,
+  });
 
   return {
     id: `lead-${company.source.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -63,12 +82,16 @@ export function convertDiscoveredToLead(
     externalUrl: company.externalUrl,
     externalId: company.id,
     source: company.source,
+    sources: company.sources,
+    duplicateFlag: company.duplicateFlag,
+    mergedCount: company.mergedCount,
     fetchedAt: company.fetchedAt || now,
     language: lang,
     status: 'NEW',
     notes: company.address
-      ? `Адрес из ${company.source}: ${company.address}`
+      ? `Адрес из ${sourcesList}: ${company.address}`
       : undefined,
+    score,
     history: [
       createHistoryEvent(
         historyType,

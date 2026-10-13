@@ -8,11 +8,60 @@ export type LeadStatus =
 
 export type Language = 'ru' | 'kz';
 
-export type WebsiteStatus = 'WEBSITE_LISTED' | 'NO_WEBSITE_LISTED';
+export type WebsiteStatus =
+  | 'WEBSITE_LISTED'
+  | 'NO_WEBSITE_LISTED'
+  | 'FOUND_UNVERIFIED'
+  | 'VERIFIED'
+  | 'CHECK_FAILED'
+  | 'NOT_SUPPORTED';
 
-export type LeadSource = '2GIS' | 'OSM' | 'MANUAL' | 'DEMO';
+export type LeadSource =
+  | '2GIS'
+  | 'OSM'
+  | 'FOURSQUARE'
+  | 'GOOGLE'
+  | 'CSV'
+  | 'MANUAL'
+  | 'DEMO'
+  | 'MULTI';
 
-export type SearchProvider = '2GIS' | 'OSM';
+export type SearchProvider = '2GIS' | 'OSM' | 'FOURSQUARE' | 'GOOGLE';
+export type SearchProviderId = '2GIS' | 'OSM' | 'FOURSQUARE' | 'GOOGLE';
+
+export interface LeadSourceMetadata {
+  sourceId: LeadSource;
+  sourceName: string;
+  externalId?: string;
+  externalUrl?: string;
+  fetchedAt: string;
+  originalName?: string;
+  originalAddress?: string;
+  originalCategory?: string;
+  originalPhone?: string;
+  originalWebsite?: string;
+  confidence?: number;
+}
+
+export type ProviderStatusState =
+  | 'idle'
+  | 'loading'
+  | 'success'
+  | 'empty'
+  | 'error'
+  | 'not_configured';
+
+export interface ProviderSearchStatus {
+  providerId: SearchProviderId;
+  providerName: string;
+  status: ProviderStatusState;
+  totalFound: number;
+  error?: string;
+  isFromCache?: boolean;
+  durationMs?: number;
+  requiresKey?: boolean;
+  isConfigured?: boolean;
+}
 
 export interface HistoryEvent {
   id: string;
@@ -24,10 +73,39 @@ export interface HistoryEvent {
     | 'STATUS_CHANGED'
     | 'MESSAGE_EDITED'
     | 'IMPORTED_FROM_2GIS'
-    | 'IMPORTED_FROM_OSM';
+    | 'IMPORTED_FROM_OSM'
+    | 'IMPORTED_FROM_CSV';
   description: string;
   previousStatus?: LeadStatus;
   newStatus?: LeadStatus;
+}
+
+export type LeadGrade = 'A' | 'B' | 'C' | 'D';
+
+export interface LeadScoreFactor {
+  factor: string;
+  points: number;
+  description: string;
+}
+
+export interface LeadScoreResult {
+  score: number; // 0..100
+  grade: LeadGrade;
+  reasons: string[];
+  factors: LeadScoreFactor[];
+}
+
+export interface LeadScoreWeights {
+  noWebsiteListed: number;      // default: 40
+  validMobilePhone: number;     // default: 25
+  validLandlinePhone: number;   // default: 10
+  highMarginCategory: number;   // default: 20
+  midMarginCategory: number;    // default: 15
+  baseCategory: number;         // default: 10
+  hasAddress: number;           // default: 6
+  hasCoordinates: number;       // default: 4
+  verifiedSource2Gis: number;   // default: 5
+  verifiedSourceOsm: number;    // default: 3
 }
 
 export interface BusinessLead {
@@ -55,6 +133,12 @@ export interface BusinessLead {
   status: LeadStatus;
   history: HistoryEvent[];
   notes?: string;
+  score?: LeadScoreResult;
+  sources?: LeadSourceMetadata[];
+  userEditedFields?: string[];
+  duplicateFlag?: 'EXACT_PHONE' | 'POSSIBLE_NAME_MATCH' | 'BRANCH' | null;
+  possibleDuplicateOf?: string;
+  mergedCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +177,11 @@ export interface DiscoveredCompany {
   websiteStatus: WebsiteStatus;
   websiteUrl?: string;
   externalUrl?: string;
-  source: '2GIS' | 'OSM';
+  source: LeadSource;
+  sources?: LeadSourceMetadata[];
   fetchedAt: string;
+  duplicateFlag?: 'EXACT_PHONE' | 'POSSIBLE_NAME_MATCH' | 'BRANCH' | null;
+  possibleDuplicateOf?: string;
+  mergedCount?: number;
+  confidenceScore?: number;
 }

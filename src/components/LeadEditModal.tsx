@@ -23,6 +23,29 @@ export const LeadEditModal: React.FC<LeadEditModalProps> = ({
 }) => {
   if (!lead) return null;
 
+  return (
+    <LeadEditModalContent
+      lead={lead}
+      onClose={onClose}
+      onSave={onSave}
+      onShowToast={onShowToast}
+    />
+  );
+};
+
+interface LeadEditModalContentProps {
+  lead: BusinessLead;
+  onClose: () => void;
+  onSave: (updated: BusinessLead) => void;
+  onShowToast: (text: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+const LeadEditModalContent: React.FC<LeadEditModalContentProps> = ({
+  lead,
+  onClose,
+  onSave,
+  onShowToast,
+}) => {
   const [message, setMessage] = useState(
     lead.customMessage || getDefaultMessage(lead.businessName, lead.category, lead.language)
   );

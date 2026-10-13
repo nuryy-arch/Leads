@@ -1,0 +1,17 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/2gis/:match*",
+      "destination": "https://catalog.api.2gis.com/:match*"
+    },
+    {
+      "source": "/api/overpass/:match*",
+      "destination": "https://overpass-api.de/:match*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

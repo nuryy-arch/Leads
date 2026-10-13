@@ -21,6 +21,7 @@ import {
   openWhatsAppSafely,
   createHistoryEvent,
 } from '../utils/whatsapp';
+import { calculateLeadScore, getGradeLabel } from '../utils/scoring';
 
 interface LeadCardProps {
   lead: BusinessLead;
@@ -38,6 +39,10 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   onShowToast,
 }) => {
   const [showUrlDetails, setShowUrlDetails] = useState(false);
+  const [showScoreDetails, setShowScoreDetails] = useState(false);
+
+  const scoreResult = lead.score || calculateLeadScore(lead);
+  const gradeInfo = getGradeLabel(scoreResult.grade);
 
   // Active message is either user's custom edit or default generated based on language
   const activeMessage =
@@ -305,10 +310,33 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 📍 {lead.coordinates.lat.toFixed(4)}, {lead.coordinates.lon.toFixed(4)}
               </span>
             )}
+            <button
+              type="button"
+              className={`score-badge ${gradeInfo.badgeClass}`}
+              onClick={() => setShowScoreDetails(!showScoreDetails)}
+              title="Нажмите, чтобы увидеть обоснование скоринга"
+            >
+              <span>{gradeInfo.emoji} Потенциал: {scoreResult.score}/100 ({gradeInfo.label})</span>
+              {showScoreDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
           </div>
         </div>
         <div>{getStatusBadge()}</div>
       </div>
+
+      {/* Expandable Score Details */}
+      {showScoreDetails && (
+        <div className="score-details-panel">
+          <div className="score-details-title">
+            Обоснование рейтинга ({scoreResult.score} из 100 баллов, Грейд {scoreResult.grade}):
+          </div>
+          <ul className="score-reasons-list">
+            {scoreResult.reasons.map((reason, idx) => (
+              <li key={idx}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Address & Public Website info if available */}
       <div
@@ -393,7 +421,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
       {lead.fetchedAt && (
         <div style={{ fontSize: '10.5px', color: '#94a3b8', marginBottom: 8, textAlign: 'right' }}>
-          Получено: {new Date(lead.fetchedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ({lead.source || 'Источник'})
+          Получено: {new Date(lead.fetchedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ({lead.sources && lead.sources.length > 1 ? lead.sources.map((s) => s.sourceName).join(' + ') : lead.source || 'Источник'})
         </div>
       )}
 

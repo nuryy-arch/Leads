@@ -21,7 +21,7 @@ export function normalizePhoneNumber(raw: string): PhoneValidationResult {
   }
 
   // Remove any spaces, dashes, brackets, dots, plus signs
-  let cleaned = raw.replace(/[\s\-\(\)\.\+]/g, '');
+  let cleaned = raw.replace(/[\s\-().+]/g, '');
 
   // Reject if any non-digit character remains
   if (!/^\d+$/.test(cleaned)) {
