@@ -1,5 +1,4 @@
-import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -30,7 +29,13 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenMigration,
   hasLocalLeadsToMigrate,
 }) => {
+  const navigate = useNavigate();
   const { user, isConfigured, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -114,7 +119,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => signOut()}
+                  onClick={handleLogout}
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: 11, padding: '4px 8px' }}
                   title="Выйти из аккаунта"
@@ -194,18 +199,18 @@ export const Navigation: React.FC<NavigationProps> = ({
           <span>Настройки</span>
         </NavLink>
 
-        {isConfigured && (
-          <NavLink
-            to={user ? "/settings" : "/login"}
-            className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
-          >
-            <div className="mobile-nav-icon-wrapper">
-              <User size={20} />
-              {user && <span className="mobile-dot active" />}
-            </div>
-            <span>{user ? 'Профиль' : 'Вход'}</span>
-          </NavLink>
-        )}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mobile-nav-item"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          title="Выйти из системы"
+        >
+          <div className="mobile-nav-icon-wrapper">
+            <LogOut size={20} />
+          </div>
+          <span>Выход</span>
+        </button>
       </nav>
     </>
   );

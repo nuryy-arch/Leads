@@ -89,46 +89,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    setError(null);
-    if (!isSupabaseConfigured || !supabase) {
-      const msg = 'Supabase не настроен.';
-      setError(msg);
-      return { success: false, error: msg };
-    }
-
-    try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            display_name: displayName?.trim() || splitEmail(email),
-          },
-        },
-      });
-
-      if (signUpError) {
-        setError(signUpError.message);
-        return { success: false, error: signUpError.message };
-      }
-
-      // Check if email confirmation is required
-      if (data.user && !data.session) {
-        return {
-          success: true,
-          message: 'Регистрация успешна! Проверьте почту для подтверждения аккаунта.',
-        };
-      }
-
-      setSession(data.session);
-      setUser(data.user);
-      return { success: true, message: 'Регистрация завершена!' };
-    } catch (err: any) {
-      const msg = err.message || 'Ошибка регистрации';
-      setError(msg);
-      return { success: false, error: msg };
-    }
+  const signUp = async (_email?: string, _password?: string, _displayName?: string) => {
+    const msg =
+      'Публичная регистрация отключена владельцем системы. Доступ разрешён только для авторизованной учётной записи.';
+    setError(msg);
+    return { success: false, error: msg };
   };
 
   const signOut = async () => {
@@ -197,8 +162,4 @@ export function useAuth(): AuthContextType {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
-
-function splitEmail(email: string): string {
-  return email.split('@')[0] || 'Пользователь';
 }

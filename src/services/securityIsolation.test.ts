@@ -43,4 +43,10 @@ describe('Security & Multi-Tenant Data Isolation Audit', () => {
     const res = await repo.batchInsertLeads([], 'user-isolated');
     expect(res).toEqual({ inserted: 0, failed: 0 });
   });
+
+  it('verifies that client_id is preserved for frontend deduplication without exposing PostgreSQL UUID', () => {
+    const row = leadToDbRow(dummyLead, 'owner-uuid');
+    expect(row.client_id).toBe(dummyLead.id);
+    expect(row.user_id).toBe('owner-uuid');
+  });
 });

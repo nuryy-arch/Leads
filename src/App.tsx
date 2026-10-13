@@ -7,8 +7,8 @@ import { LeadsPage } from './pages/LeadsPage';
 import { FinderPage } from './pages/FinderPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { MigrationModal } from './components/MigrationModal';
 import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
@@ -190,60 +190,69 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-root">
-      {/* Top Navbar & Mobile Navigation */}
-      <Navigation
-        totalLeadsCount={leads.length}
-        newLeadsCount={newLeadsCount}
-        is2GisKeySet={Boolean(apiKey)}
-        hasLocalLeadsToMigrate={hasLocalLeadsToMigrate}
-        onOpenMigration={() => setIsMigrationModalOpen(true)}
-      />
+      {/* Top Navbar & Mobile Navigation - shown only when authenticated */}
+      {user && (
+        <Navigation
+          totalLeadsCount={leads.length}
+          newLeadsCount={newLeadsCount}
+          is2GisKeySet={Boolean(apiKey)}
+          hasLocalLeadsToMigrate={hasLocalLeadsToMigrate}
+          onOpenMigration={() => setIsMigrationModalOpen(true)}
+        />
+      )}
 
       {/* Main Content View with Routes */}
       <main className="app-main-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/leads" replace />} />
+          <Route path="/" element={<Navigate to={user ? "/leads" : "/login"} replace />} />
           <Route
             path="/leads"
             element={
-              <LeadsPage
-                leads={leads}
-                onUpdateLead={handleUpdateLead}
-                onAddLead={handleAddLead}
-                onImportLeads={handleImportLeads}
-                onResetDemo={handleResetDemo}
-                is2GisKeySet={Boolean(apiKey)}
-                onShowToast={showToast}
-              />
+              <ProtectedRoute>
+                <LeadsPage
+                  leads={leads}
+                  onUpdateLead={handleUpdateLead}
+                  onAddLead={handleAddLead}
+                  onImportLeads={handleImportLeads}
+                  onResetDemo={handleResetDemo}
+                  is2GisKeySet={Boolean(apiKey)}
+                  onShowToast={showToast}
+                />
+              </ProtectedRoute>
             }
           />
           <Route
             path="/finder"
             element={
-              <FinderPage
-                existingLeads={leads}
-                onImportLeads={handleImportLeads}
-                onShowToast={showToast}
-              />
+              <ProtectedRoute>
+                <FinderPage
+                  existingLeads={leads}
+                  onImportLeads={handleImportLeads}
+                  onShowToast={showToast}
+                />
+              </ProtectedRoute>
             }
           />
           <Route
             path="/settings"
             element={
-              <SettingsPage
-                leads={leads}
-                onResetDemo={handleResetDemo}
-                onShowToast={showToast}
-              />
+              <ProtectedRoute>
+                <SettingsPage
+                  leads={leads}
+                  onResetDemo={handleResetDemo}
+                  onShowToast={showToast}
+                />
+              </ProtectedRoute>
             }
           />
 
-          {/* Supabase Auth Routes */}
+          {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          <Route path="*" element={<Navigate to="/leads" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to={user ? "/leads" : "/login"} replace />} />
         </Routes>
       </main>
 
