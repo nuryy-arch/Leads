@@ -1,5 +1,15 @@
 import React from 'react';
-import { MessageSquare, Plus, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  Building2,
+  Key,
+  Download,
+  ShieldCheck,
+  AlertCircle,
+} from 'lucide-react';
 import type { BusinessLead, LeadStatus } from '../types';
 
 interface HeaderProps {
@@ -8,6 +18,10 @@ interface HeaderProps {
   onFilterChange: (status: LeadStatus | 'ALL') => void;
   onOpenAddModal: () => void;
   onOpenValidatorModal: () => void;
+  onOpenLeadFinderModal: () => void;
+  onOpenKeyModal: () => void;
+  onExportCsv: () => void;
+  is2GisKeySet: boolean;
   onResetDemo: () => void;
 }
 
@@ -17,6 +31,10 @@ export const Header: React.FC<HeaderProps> = ({
   onFilterChange,
   onOpenAddModal,
   onOpenValidatorModal,
+  onOpenLeadFinderModal,
+  onOpenKeyModal,
+  onExportCsv,
+  is2GisKeySet,
   onResetDemo,
 }) => {
   const counts = {
@@ -37,28 +55,85 @@ export const Header: React.FC<HeaderProps> = ({
             <span style={{ color: '#25D366' }}>
               <MessageSquare size={30} style={{ verticalAlign: 'middle', marginRight: 6 }} />
             </span>
-            WhatsApp Click-to-Chat Outbound Module
+            WhatsApp Click-to-Chat & Поиск клиентов по Казахстану
           </h1>
           <p className="header-subtitle">
-            Персонализированная отправка коммерческих предложений по разработке сайтов с безопасной генерацией ссылок и защитой от спама.
+            Автоматический поиск организаций по городам Казахстана через 2GIS API и безопасная отправка предложений сайтов через Click-to-Chat.
           </p>
-          <div className="badge-author">
-            <Sparkles size={14} color="#16a34a" />
-            <span>Разработчик: Нурдаулет • Продажи сайтов для бизнеса</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+            <div className="badge-author" style={{ marginTop: 0 }}>
+              <Sparkles size={14} color="#16a34a" />
+              <span>Разработчик: Нурдаулет • Продажи сайтов для бизнеса</span>
+            </div>
+
+            {/* 2GIS API Status Badge */}
+            <button
+              type="button"
+              onClick={onOpenKeyModal}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: '12px',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                border: '1px solid',
+                background: is2GisKeySet ? '#f0fdf4' : '#fffbeb',
+                borderColor: is2GisKeySet ? '#bbf7d0' : '#fde68a',
+                color: is2GisKeySet ? '#166534' : '#92400e',
+                fontWeight: 600,
+              }}
+              title="Нажмите для настройки API-ключа 2GIS"
+            >
+              {is2GisKeySet ? (
+                <>
+                  <ShieldCheck size={13} color="#16a34a" />
+                  <span>2GIS API активен</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle size={13} color="#d97706" />
+                  <span>2GIS: Требуется ключ</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={onOpenAddModal}>
+          {/* Main New Lead Discovery Button */}
+          <button
+            className="btn btn-primary"
+            onClick={onOpenLeadFinderModal}
+            style={{ backgroundColor: '#0284c7' }}
+            title="Автоматический поиск реальных компаний по Казахстану через 2GIS"
+          >
+            <Building2 size={16} />
+            <span>Найти клиентов (2ГИС)</span>
+          </button>
+
+          <button className="btn btn-secondary" onClick={onOpenAddModal} title="Вручную добавить организацию">
             <Plus size={16} />
-            <span>Добавить бизнес</span>
+            <span>+ Добавить</span>
           </button>
+
+          <button className="btn btn-secondary" onClick={onExportCsv} title="Экспорт контактов в Excel/CSV с поддержкой кириллицы">
+            <Download size={15} />
+            <span>Экспорт CSV</span>
+          </button>
+
+          <button className="btn btn-secondary" onClick={onOpenKeyModal} title="Настройки API 2GIS">
+            <Key size={14} />
+            <span>Ключ API</span>
+          </button>
+
           <button className="btn btn-secondary" onClick={onOpenValidatorModal} title="Тестирование формирования ссылок на казахском и русском">
-            <span>Проверка ссылок (RU / KZ)</span>
+            <span>Тест ссылок (RU/KZ)</span>
           </button>
+
           <button className="btn btn-secondary" onClick={onResetDemo} title="Сбросить базу до исходных демо-данных">
             <RefreshCw size={14} />
-            <span>Сброс базы</span>
           </button>
         </div>
       </div>

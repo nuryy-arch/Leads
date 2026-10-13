@@ -259,9 +259,105 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           <div className="business-meta">
             <span className="tag-category">{lead.category}</span>
             <span className="tag-city">{lead.city}</span>
+            {lead.source === '2GIS' && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  background: '#f0fdf4',
+                  color: '#166534',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  fontWeight: 600,
+                  border: '1px solid #bbf7d0',
+                }}
+              >
+                2GIS
+              </span>
+            )}
           </div>
         </div>
         <div>{getStatusBadge()}</div>
+      </div>
+
+      {/* Address & Public Website info if available */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 10,
+          fontSize: '12px',
+          color: '#475569',
+          flexWrap: 'wrap',
+        }}
+      >
+        {lead.address && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ color: '#64748b' }}>📍</span>
+            <span>{lead.address}</span>
+          </div>
+        )}
+
+        {/* Website status (Requirement 4: NO_WEBSITE_LISTED) */}
+        {lead.websiteStatus === 'WEBSITE_LISTED' && lead.websiteUrl ? (
+          <a
+            href={lead.websiteUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              fontSize: '11px',
+              background: '#ecfdf5',
+              color: '#065f46',
+              padding: '1px 6px',
+              borderRadius: 4,
+              textDecoration: 'none',
+              border: '1px solid #a7f3d0',
+            }}
+            title="Сайт указан в карточке"
+          >
+            <span>🌐 {lead.websiteUrl.replace(/^https?:\/\//, '')}</span>
+            <ExternalLink size={10} />
+          </a>
+        ) : (
+          <span
+            style={{
+              fontSize: '11px',
+              background: '#eff6ff',
+              color: '#1e40af',
+              padding: '1px 6px',
+              borderRadius: 4,
+              fontWeight: 500,
+              border: '1px solid #bfdbfe',
+            }}
+            title="В доступных источниках сайт не указан"
+          >
+            NO_WEBSITE_LISTED
+          </span>
+        )}
+
+        {lead.externalUrl && (
+          <a
+            href={lead.externalUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              fontSize: '11px',
+              color: '#0284c7',
+              textDecoration: 'none',
+              marginLeft: 'auto',
+            }}
+            title="Открыть карточку организации в 2ГИС"
+          >
+            <span>Карточка 2ГИС</span>
+            <ExternalLink size={11} />
+          </a>
+        )}
       </div>
 
       {/* Phone Block */}

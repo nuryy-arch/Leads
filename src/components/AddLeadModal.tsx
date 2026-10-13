@@ -49,6 +49,8 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
       phoneFormatted: phoneValidation.normalized,
       isValidPhone: true,
       city: city.trim(),
+      websiteStatus: 'NO_WEBSITE_LISTED',
+      source: 'MANUAL',
       language,
       status: 'NEW',
       notes: notes.trim(),
