@@ -274,6 +274,37 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 2GIS
               </span>
             )}
+            {lead.source === 'OSM' && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  fontWeight: 600,
+                  border: '1px solid #bfdbfe',
+                }}
+                title="Источник: OpenStreetMap (Overpass API)"
+              >
+                🗺️ OpenStreetMap
+              </span>
+            )}
+            {lead.coordinates && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  background: '#f8fafc',
+                  color: '#475569',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  border: '1px solid #e2e8f0',
+                }}
+                title={`Координаты: ${lead.coordinates.lat.toFixed(5)}, ${lead.coordinates.lon.toFixed(5)}`}
+              >
+                📍 {lead.coordinates.lat.toFixed(4)}, {lead.coordinates.lon.toFixed(4)}
+              </span>
+            )}
           </div>
         </div>
         <div>{getStatusBadge()}</div>
@@ -352,13 +383,19 @@ export const LeadCard: React.FC<LeadCardProps> = ({
               textDecoration: 'none',
               marginLeft: 'auto',
             }}
-            title="Открыть карточку организации в 2ГИС"
+            title={lead.source === 'OSM' ? 'Открыть объект на карте OpenStreetMap' : 'Открыть карточку организации в 2ГИС'}
           >
-            <span>Карточка 2ГИС</span>
+            <span>{lead.source === 'OSM' ? 'Объект OSM' : 'Карточка 2ГИС'}</span>
             <ExternalLink size={11} />
           </a>
         )}
       </div>
+
+      {lead.fetchedAt && (
+        <div style={{ fontSize: '10.5px', color: '#94a3b8', marginBottom: 8, textAlign: 'right' }}>
+          Получено: {new Date(lead.fetchedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ({lead.source || 'Источник'})
+        </div>
+      )}
 
       {/* Phone Block */}
       <div className="phone-block">

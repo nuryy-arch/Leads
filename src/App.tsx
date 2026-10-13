@@ -41,6 +41,7 @@ export const App: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [phoneFilter, setPhoneFilter] = useState<'ALL' | 'HAS_PHONE' | 'NO_PHONE'>('ALL');
   const [websiteFilter, setWebsiteFilter] = useState<WebsiteStatus | 'ALL'>('ALL');
+  const [sourceFilter, setSourceFilter] = useState<string>('ALL');
   const [languageFilter, setLanguageFilter] = useState<Language | 'ALL'>('ALL');
 
   // Modal states
@@ -170,6 +171,11 @@ export const App: React.FC = () => {
         return false;
       }
 
+      // Source filter (2GIS / OSM / MANUAL / DEMO)
+      if (sourceFilter !== 'ALL' && lead.source !== sourceFilter) {
+        return false;
+      }
+
       // Language filter
       if (languageFilter !== 'ALL' && lead.language !== languageFilter) {
         return false;
@@ -185,6 +191,7 @@ export const App: React.FC = () => {
     categoryFilter,
     phoneFilter,
     websiteFilter,
+    sourceFilter,
     languageFilter,
   ]);
 
@@ -287,6 +294,20 @@ export const App: React.FC = () => {
             <option value="INTERESTED">Заинтересованы 🔥</option>
             <option value="REJECTED">Отказ</option>
             <option value="DO_NOT_CONTACT">Не беспокоить (DNC)</option>
+          </select>
+
+          {/* Source filter */}
+          <select
+            className="select-custom"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            title="Источник данных"
+          >
+            <option value="ALL">Любой источник</option>
+            <option value="2GIS">2GIS</option>
+            <option value="OSM">OpenStreetMap (OSM)</option>
+            <option value="DEMO">Демо-база</option>
+            <option value="MANUAL">Вручную добавлен</option>
           </select>
 
           {/* Language filter */}

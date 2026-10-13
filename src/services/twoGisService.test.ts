@@ -56,6 +56,7 @@ describe('Lead Management & Deduplication', () => {
       isValidPhone: true,
       websiteStatus: 'NO_WEBSITE_LISTED',
       source: '2GIS',
+      fetchedAt: new Date().toISOString(),
     };
 
     expect(isDuplicateLead(candidate, existingLeads)).toBe(true);
@@ -73,6 +74,7 @@ describe('Lead Management & Deduplication', () => {
       isValidPhone: true,
       websiteStatus: 'NO_WEBSITE_LISTED',
       source: '2GIS',
+      fetchedAt: new Date().toISOString(),
     };
 
     expect(isDuplicateLead(candidate, existingLeads)).toBe(true);
@@ -90,6 +92,7 @@ describe('Lead Management & Deduplication', () => {
       isValidPhone: true,
       websiteStatus: 'NO_WEBSITE_LISTED',
       source: '2GIS',
+      fetchedAt: new Date().toISOString(),
     };
 
     expect(isDuplicateLead(candidate, existingLeads)).toBe(false);
@@ -108,6 +111,7 @@ describe('Lead Management & Deduplication', () => {
       websiteStatus: 'NO_WEBSITE_LISTED',
       externalUrl: 'https://2gis.kz/shymkent/firm/12345',
       source: '2GIS',
+      fetchedAt: new Date().toISOString(),
     };
 
     const lead = convertDiscoveredToLead(candidate, 'kz');

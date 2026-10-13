@@ -107,10 +107,10 @@ export const Header: React.FC<HeaderProps> = ({
             className="btn btn-primary"
             onClick={onOpenLeadFinderModal}
             style={{ backgroundColor: '#0284c7' }}
-            title="Автоматический поиск реальных компаний по Казахстану через 2GIS"
+            title="Автоматический поиск реальных компаний по Казахстану через 2GIS и OpenStreetMap"
           >
             <Building2 size={16} />
-            <span>Найти клиентов (2ГИС)</span>
+            <span>Найти клиентов (2GIS / OSM)</span>
           </button>
 
           <button className="btn btn-secondary" onClick={onOpenAddModal} title="Вручную добавить организацию">

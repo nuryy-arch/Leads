@@ -15,13 +15,17 @@ import {
   CheckSquare,
   Square,
   ShieldCheck,
+  Compass,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
-import type { BusinessLead, DiscoveredCompany, KazakhstanCity } from '../types';
+import type { BusinessLead, DiscoveredCompany, KazakhstanCity, SearchProvider } from '../types';
 import { KAZAKHSTAN_CITIES, BUSINESS_CATEGORIES } from '../data/kazakhstanData';
 import {
   searchTwoGisCompanies,
   getStoredTwoGisApiKey,
 } from '../services/twoGisService';
+import { searchOverpassCompanies } from '../services/overpassService';
 import { isDuplicateLead, convertDiscoveredToLead } from '../utils/leadManagement';
 import { formatPhoneForDisplay } from '../utils/whatsapp';
 
@@ -42,6 +46,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
   onOpenKeyModal,
   onShowToast,
 }) => {
+  const [sourceProvider, setSourceProvider] = useState<SearchProvider>('2GIS');
   const [selectedCity, setSelectedCity] = useState<KazakhstanCity>(KAZAKHSTAN_CITIES[0]);
   const [selectedCategory, setSelectedCategory] = useState(BUSINESS_CATEGORIES[0].query);
   const [customQuery, setCustomQuery] = useState('');
@@ -51,52 +56,98 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
   const [totalFound, setTotalFound] = useState<number | null>(null);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
   const [filterWebsiteOnly, setFilterWebsiteOnly] = useState<'ALL' | 'NO_SITE' | 'HAS_SITE'>('ALL');
+  const [isFromCache, setIsFromCache] = useState(false);
+  const [fetchedAtTime, setFetchedAtTime] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const apiKey = getStoredTwoGisApiKey();
 
-  const handleSearch = async () => {
-    if (!apiKey) {
-      onShowToast('Необходимо настроить 2GIS API-ключ перед поиском', 'error');
-      onOpenKeyModal();
-      return;
-    }
-
-    const queryToUse = customQuery.trim() || selectedCategory;
+  const handleSearch = async (forceRefresh = false) => {
     setIsLoading(true);
     setSearchError(null);
     setSelectedCompanyIds(new Set());
+    setIsFromCache(false);
 
-    try {
-      const result = await searchTwoGisCompanies({
-        apiKey,
-        query: queryToUse,
-        cityName: selectedCity.name,
-        regionId: selectedCity.regionId,
-        page: 1,
-        pageSize: 50,
-      });
+    const activeCat = BUSINESS_CATEGORIES.find((c) => c.query === selectedCategory);
+    const queryToUse = customQuery.trim() || selectedCategory;
 
-      if (result.error) {
-        setSearchError(result.error);
-        setSearchResults([]);
-        setTotalFound(0);
-        onShowToast(`Ошибка 2GIS: ${result.error}`, 'error');
-      } else {
-        setSearchResults(result.companies);
-        setTotalFound(result.total);
-        if (result.companies.length === 0) {
-          onShowToast('Организации по запросу не найдены', 'info');
-        } else {
-          onShowToast(`Найдено ${result.companies.length} организаций в 2ГИС`, 'success');
-        }
+    if (sourceProvider === '2GIS') {
+      if (!apiKey) {
+        setIsLoading(false);
+        onShowToast('Необходимо настроить 2GIS API-ключ перед поиском', 'error');
+        onOpenKeyModal();
+        return;
       }
-    } catch (e: any) {
-      setSearchError(e.message || 'Ошибка выполнения поиска');
-      onShowToast('Сетевая ошибка при поиске', 'error');
-    } finally {
-      setIsLoading(false);
+
+      try {
+        const result = await searchTwoGisCompanies({
+          apiKey,
+          query: queryToUse,
+          cityName: selectedCity.name,
+          regionId: selectedCity.regionId,
+          page: 1,
+          pageSize: 50,
+        });
+
+        if (result.error) {
+          setSearchError(result.error);
+          setSearchResults([]);
+          setTotalFound(0);
+          onShowToast(`Ошибка 2GIS: ${result.error}`, 'error');
+        } else {
+          setSearchResults(result.companies);
+          setTotalFound(result.total);
+          setFetchedAtTime(new Date().toISOString());
+          if (result.companies.length === 0) {
+            onShowToast('Организации в 2ГИС по запросу не найдены', 'info');
+          } else {
+            onShowToast(`Найдено ${result.companies.length} организаций в 2ГИС`, 'success');
+          }
+        }
+      } catch (e: any) {
+        setSearchError(e.message || 'Ошибка выполнения поиска в 2GIS');
+        onShowToast('Сетевая ошибка при поиске 2GIS', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // OpenStreetMap via Overpass API
+      try {
+        const result = await searchOverpassCompanies({
+          city: selectedCity,
+          categoryQuery: queryToUse,
+          osmFilter: customQuery.trim() ? undefined : activeCat?.osmFilter,
+          limit: 50,
+          forceRefresh,
+        });
+
+        if (result.error) {
+          setSearchError(result.error);
+          setSearchResults([]);
+          setTotalFound(0);
+          onShowToast(`Ошибка OpenStreetMap: ${result.error}`, 'error');
+        } else {
+          setSearchResults(result.companies);
+          setTotalFound(result.total);
+          setIsFromCache(result.isFromCache);
+          setFetchedAtTime(result.fetchedAt);
+
+          if (result.companies.length === 0) {
+            onShowToast('Организации в OpenStreetMap по запросу не найдены', 'info');
+          } else {
+            onShowToast(
+              `Найдено ${result.companies.length} организаций в OSM${result.isFromCache ? ' (из кеша)' : ''}`,
+              'success'
+            );
+          }
+        }
+      } catch (e: any) {
+        setSearchError(e.message || 'Ошибка поиска в OpenStreetMap');
+        onShowToast('Сетевая ошибка при обращении к OpenStreetMap', 'error');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -135,7 +186,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
 
     const newLead = convertDiscoveredToLead(company, 'ru');
     onImportLeads([newLead]);
-    onShowToast(`«${company.name}» добавлена в CRM!`, 'success');
+    onShowToast(`«${company.name}» (${company.source}) добавлена в CRM!`, 'success');
   };
 
   // Batch Import
@@ -146,7 +197,6 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
       return;
     }
 
-    // Filter duplicates
     const nonDuplicates = selectedCompanies.filter((c) => !isAlreadyInCrm(c));
     if (nonDuplicates.length === 0) {
       onShowToast('Все выбранные организации уже есть в CRM', 'info');
@@ -174,7 +224,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content"
-        style={{ maxWidth: '980px', width: '95vw', maxHeight: '92vh' }}
+        style={{ maxWidth: '1020px', width: '96vw', maxHeight: '92vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -182,10 +232,10 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
           <div>
             <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Building2 size={22} color="#0284c7" />
-              <span>Поиск потенциальных клиентов по Казахстану (2GIS API)</span>
+              <span>Поиск потенциальных клиентов по Казахстану</span>
             </h2>
             <div style={{ fontSize: '13px', color: '#64748b', marginTop: 2 }}>
-              Поиск реальных организаций, проверка наличия сайта и подключение к WhatsApp Click-to-Chat
+              Выбор источника данных (2GIS / OpenStreetMap), проверка наличия сайта и подключение к WhatsApp Click-to-Chat
             </div>
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -193,25 +243,98 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
           </button>
         </div>
 
-        {/* API Key Status Notice */}
-        {!apiKey ? (
+        {/* Source Provider Switcher (2GIS vs OpenStreetMap) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#f1f5f9',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            marginBottom: '14px',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Источник данных:</span>
+            <div className="lang-selector">
+              <button
+                type="button"
+                className={`lang-btn ${sourceProvider === '2GIS' ? 'active' : ''}`}
+                onClick={() => {
+                  setSourceProvider('2GIS');
+                  setSearchResults([]);
+                  setSearchError(null);
+                }}
+                style={{ padding: '5px 12px', fontSize: '12.5px' }}
+              >
+                🏢 2GIS API (Каталог 3.0)
+              </button>
+              <button
+                type="button"
+                className={`lang-btn ${sourceProvider === 'OSM' ? 'active' : ''}`}
+                onClick={() => {
+                  setSourceProvider('OSM');
+                  setSearchResults([]);
+                  setSearchError(null);
+                }}
+                style={{ padding: '5px 12px', fontSize: '12.5px' }}
+              >
+                🗺️ OpenStreetMap (Overpass API)
+              </button>
+            </div>
+          </div>
+
+          {/* Provider status label */}
+          <div>
+            {sourceProvider === '2GIS' ? (
+              apiKey ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: '#166534' }}>
+                  <ShieldCheck size={14} color="#16a34a" />
+                  <span>2GIS ключ активен</span>
+                  <button type="button" className="text-btn" onClick={onOpenKeyModal} style={{ fontSize: '11px' }}>
+                    Изменить
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: '#b45309' }}>
+                  <AlertCircle size={14} />
+                  <span>Ключ 2GIS не настроен</span>
+                  <button type="button" className="text-btn" onClick={onOpenKeyModal} style={{ fontSize: '11px', color: '#0284c7' }}>
+                    Настроить
+                  </button>
+                </div>
+              )
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: '#1e40af' }}>
+                <Compass size={14} color="#2563eb" />
+                <span>OpenStreetMap • Без ключа API (ODbL) • Кеширование 15 мин</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 2GIS Warning if needed */}
+        {sourceProvider === '2GIS' && !apiKey && (
           <div
             style={{
               background: '#fffbeb',
               border: '1px solid #fde68a',
               borderRadius: '8px',
-              padding: '12px 16px',
-              marginBottom: '16px',
+              padding: '10px 14px',
+              marginBottom: '14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', color: '#92400e' }}>
-              <AlertCircle size={18} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12.5px', color: '#92400e' }}>
+              <AlertCircle size={16} />
               <span>
-                <strong>2GIS API-ключ не настроен.</strong> Для получения актуальных данных о компаниях требуется ключ API.
+                <strong>2GIS API-ключ не настроен.</strong> Вы можете переключиться на <strong>OpenStreetMap</strong> (работает без ключа) или настроить ключ 2GIS.
               </span>
             </div>
             <button
@@ -224,29 +347,6 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
               <span>Настроить ключ</span>
             </button>
           </div>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '12px',
-              fontSize: '12px',
-              color: '#166534',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              padding: '6px 12px',
-              borderRadius: '6px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ShieldCheck size={14} color="#16a34a" />
-              <span>2GIS API подключен: используется официальный каталог организаций</span>
-            </div>
-            <button type="button" className="text-btn" onClick={onOpenKeyModal} style={{ fontSize: '11.5px' }}>
-              Изменить ключ
-            </button>
-          </div>
         )}
 
         {/* Search Parameters Form */}
@@ -255,8 +355,8 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
             background: '#f8fafc',
             border: '1px solid #e2e8f0',
             borderRadius: '10px',
-            padding: '16px',
-            marginBottom: '16px',
+            padding: '14px 16px',
+            marginBottom: '14px',
           }}
         >
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1fr auto', gap: 10, alignItems: 'end' }}>
@@ -312,24 +412,37 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
               <input
                 type="text"
                 className="form-input"
-                placeholder="Например: детейлинг, спа"
+                placeholder="Например: автосервис, пицца"
                 value={customQuery}
                 onChange={(e) => setCustomQuery(e.target.value)}
               />
             </div>
 
             {/* Search Button */}
-            <div>
+            <div style={{ display: 'flex', gap: 6 }}>
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={handleSearch}
+                onClick={() => handleSearch(false)}
                 disabled={isLoading}
-                style={{ padding: '9px 18px' }}
+                style={{ padding: '9px 18px', backgroundColor: sourceProvider === 'OSM' ? '#2563eb' : '#0284c7' }}
               >
                 <Search size={16} />
                 <span>{isLoading ? 'Поиск...' : 'Найти'}</span>
               </button>
+
+              {sourceProvider === 'OSM' && searchResults.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleSearch(true)}
+                  disabled={isLoading}
+                  title="Обновить данные с сервера Overpass (без кеша)"
+                  style={{ padding: '9px 12px' }}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -344,13 +457,13 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
               border: '1px solid #fecaca',
               color: '#991b1b',
               fontSize: '13px',
-              marginBottom: '16px',
+              marginBottom: '14px',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
-            <AlertCircle size={16} />
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
             <span>{searchError}</span>
           </div>
         )}
@@ -367,11 +480,33 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
               gap: 10,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1e293b' }}>
-                Найдено в 2ГИС: {searchResults.length}
+                Источник: <strong>{sourceProvider}</strong> • Найдено: {searchResults.length}
                 {totalFound && totalFound > searchResults.length ? ` (всего ${totalFound})` : ''}
               </span>
+
+              {/* Cache and Timestamp Indicator (Requirement: "Показывай источник и дату получения данных") */}
+              {fetchedAtTime && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: '#64748b',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: '#f1f5f9',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                  }}
+                >
+                  <Clock size={11} />
+                  <span>
+                    {new Date(fetchedAtTime).toLocaleTimeString('ru-RU')}
+                    {isFromCache ? ' (из кеша)' : ' (с сервера)'}
+                  </span>
+                </span>
+              )}
 
               {/* Website Filter Tabs */}
               <div className="lang-selector">
@@ -386,7 +521,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                   type="button"
                   className={`lang-btn ${filterWebsiteOnly === 'NO_SITE' ? 'active' : ''}`}
                   onClick={() => setFilterWebsiteOnly('NO_SITE')}
-                  title="Компании без сайта в справочнике (целевая аудитория)"
+                  title="Компании без сайта (NO_WEBSITE_LISTED)"
                 >
                   Без сайта ({searchResults.filter((c) => c.websiteStatus === 'NO_WEBSITE_LISTED').length})
                 </button>
@@ -441,10 +576,12 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
             >
               <Search size={32} style={{ margin: '0 auto 8px', color: '#94a3b8' }} />
               <div style={{ fontWeight: 600, color: '#334155' }}>
-                Выберите город Казахстана и категорию бизнеса, затем нажмите «Найти»
+                Выберите источник ({sourceProvider}), город и категорию бизнеса, затем нажмите «Найти»
               </div>
               <div style={{ fontSize: '12.5px', marginTop: 4 }}>
-                Данные загружаются напрямую из официального API 2ГИС
+                {sourceProvider === '2GIS'
+                  ? 'Данные загружаются напрямую из официального каталога 2ГИС'
+                  : 'Данные загружаются напрямую из OpenStreetMap через Overpass API'}
               </div>
             </div>
           )}
@@ -487,6 +624,21 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                         <span className="tag-category">{company.category}</span>
                         <span className="tag-city">{company.city}</span>
 
+                        {/* Source Tag */}
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            background: company.source === 'OSM' ? '#eff6ff' : '#f0fdf4',
+                            color: company.source === 'OSM' ? '#1d4ed8' : '#166534',
+                            border: `1px solid ${company.source === 'OSM' ? '#bfdbfe' : '#bbf7d0'}`,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {company.source === 'OSM' ? 'OSM' : '2GIS'}
+                        </span>
+
                         {inCrm ? (
                           <span
                             style={{
@@ -503,7 +655,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                         ) : null}
                       </div>
 
-                      {/* Address & Contacts */}
+                      {/* Address, Coordinates & Contacts */}
                       <div
                         style={{
                           display: 'flex',
@@ -520,6 +672,14 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                           <span>{company.address}</span>
                         </div>
 
+                        {/* GPS Coordinates (from OSM) */}
+                        {company.coordinates && (
+                          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            📍 {company.coordinates.lat.toFixed(4)}, {company.coordinates.lon.toFixed(4)}
+                          </span>
+                        )}
+
+                        {/* Phone */}
                         {company.isValidPhone ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Phone size={13} color="#0284c7" />
@@ -533,7 +693,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                           </span>
                         )}
 
-                        {/* Website Status Badge (Requirement 4) */}
+                        {/* Website Status Badge (Requirement 4: NO_WEBSITE_LISTED) */}
                         {company.websiteStatus === 'WEBSITE_LISTED' && company.websiteUrl ? (
                           <a
                             href={company.websiteUrl}
@@ -551,7 +711,7 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                               textDecoration: 'none',
                               border: '1px solid #a7f3d0',
                             }}
-                            title="Сайт указан в карточке 2ГИС"
+                            title="Сайт указан в доступных источниках"
                           >
                             <Globe size={11} />
                             <span>{company.websiteUrl.replace(/^https?:\/\//, '')}</span>
@@ -568,13 +728,13 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                               fontWeight: 500,
                               border: '1px solid #bfdbfe',
                             }}
-                            title="В доступных источниках сайт не указан"
+                            title="Сайт не указан в источнике данных"
                           >
                             NO_WEBSITE_LISTED
                           </span>
                         )}
 
-                        {/* 2GIS Card Link */}
+                        {/* External Object Link */}
                         {company.externalUrl && (
                           <a
                             href={company.externalUrl}
@@ -588,9 +748,13 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
                               color: '#0284c7',
                               textDecoration: 'none',
                             }}
-                            title="Открыть карточку организации в 2ГИС"
+                            title={
+                              company.source === 'OSM'
+                                ? 'Открыть объект на карте OpenStreetMap'
+                                : 'Открыть карточку в 2ГИС'
+                            }
                           >
-                            <span>Карточка 2ГИС</span>
+                            <span>{company.source === 'OSM' ? 'Объект OSM' : 'Карточка 2ГИС'}</span>
                             <ExternalLink size={11} />
                           </a>
                         )}
@@ -628,13 +792,13 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 16,
+            marginTop: 14,
             paddingTop: 12,
             borderTop: '1px solid #e2e8f0',
           }}
         >
           <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Все добавленные организации автоматически подключаются к WhatsApp Click-to-Chat.
+            Все организации из 2GIS и OpenStreetMap подключаются к WhatsApp Click-to-Chat.
           </div>
           <button className="btn btn-secondary" onClick={onClose}>
             Закрыть

@@ -246,6 +246,7 @@ export async function searchTwoGisCompanies(
         websiteUrl: websiteUrl ? normalizeWebsiteUrl(websiteUrl) : undefined,
         externalUrl,
         source: '2GIS' as const,
+        fetchedAt: new Date().toISOString(),
       };
     });
 

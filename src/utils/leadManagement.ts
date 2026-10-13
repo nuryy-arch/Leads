@@ -32,16 +32,23 @@ export function isDuplicateLead(
 }
 
 /**
- * Converts a DiscoveredCompany from 2GIS into a full BusinessLead ready for CRM and WhatsApp
+ * Converts a DiscoveredCompany (from 2GIS or OpenStreetMap) into a full BusinessLead ready for CRM and WhatsApp
  */
 export function convertDiscoveredToLead(
   company: DiscoveredCompany,
   lang: Language = 'ru'
 ): BusinessLead {
   const now = new Date().toISOString();
+  const isOsm = company.source === 'OSM';
+
+  const historyDescription = isOsm
+    ? `Импортировано из OpenStreetMap (${company.city}). Источник: Overpass API. Статус сайта: ${company.websiteStatus}`
+    : `Импортировано из официального каталога 2ГИС (${company.city}). Статус сайта: ${company.websiteStatus}`;
+
+  const historyType = isOsm ? 'IMPORTED_FROM_OSM' : 'IMPORTED_FROM_2GIS';
 
   return {
-    id: `lead-2gis-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id: `lead-${company.source.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     businessName: company.name,
     category: company.category,
     phoneRaw: company.phoneRaw,
@@ -50,18 +57,22 @@ export function convertDiscoveredToLead(
     phoneError: company.phoneError,
     city: company.city,
     address: company.address,
+    coordinates: company.coordinates,
     websiteStatus: company.websiteStatus,
     websiteUrl: company.websiteUrl,
     externalUrl: company.externalUrl,
     externalId: company.id,
-    source: '2GIS',
+    source: company.source,
+    fetchedAt: company.fetchedAt || now,
     language: lang,
     status: 'NEW',
-    notes: company.address ? `Адрес из 2ГИС: ${company.address}` : undefined,
+    notes: company.address
+      ? `Адрес из ${company.source}: ${company.address}`
+      : undefined,
     history: [
       createHistoryEvent(
-        'IMPORTED_FROM_2GIS',
-        `Импортировано из официального каталога 2ГИС (${company.city}). Статус сайта: ${company.websiteStatus}`,
+        historyType,
+        historyDescription,
         undefined,
         'NEW'
       ),
@@ -84,17 +95,20 @@ export function exportLeadsToCsv(
     'Категория бизнеса',
     'Город',
     'Адрес',
+    'Координаты (GPS)',
+    'Источник данных',
+    'Дата получения данных',
     'Исходный телефон',
     'Телефон (E.164)',
     'Валидность телефона',
     'Статус сайта',
     'Ссылка на сайт',
-    'Ссылка 2GIS',
+    'Ссылка на карточку (2GIS / OSM)',
     'Статус в CRM',
     'Язык шаблона',
     'Ссылка WhatsApp Click-to-Chat',
     'Заметки',
-    'Дата добавления',
+    'Дата добавления в CRM',
   ];
 
   const escapeCsv = (val: any): string => {
@@ -114,12 +128,19 @@ export function exportLeadsToCsv(
       } catch {}
     }
 
+    const coordsStr = lead.coordinates
+      ? `${lead.coordinates.lat}, ${lead.coordinates.lon}`
+      : '';
+
     return [
       lead.id,
       lead.businessName,
       lead.category,
       lead.city,
       lead.address || '',
+      coordsStr,
+      lead.source || 'MANUAL',
+      lead.fetchedAt || lead.createdAt,
       lead.phoneRaw,
       lead.phoneFormatted,
       lead.isValidPhone ? 'Да' : 'Нет',

@@ -10,6 +10,10 @@ export type Language = 'ru' | 'kz';
 
 export type WebsiteStatus = 'WEBSITE_LISTED' | 'NO_WEBSITE_LISTED';
 
+export type LeadSource = '2GIS' | 'OSM' | 'MANUAL' | 'DEMO';
+
+export type SearchProvider = '2GIS' | 'OSM';
+
 export interface HistoryEvent {
   id: string;
   timestamp: string;
@@ -19,7 +23,8 @@ export interface HistoryEvent {
     | 'MARKED_SENT'
     | 'STATUS_CHANGED'
     | 'MESSAGE_EDITED'
-    | 'IMPORTED_FROM_2GIS';
+    | 'IMPORTED_FROM_2GIS'
+    | 'IMPORTED_FROM_OSM';
   description: string;
   previousStatus?: LeadStatus;
   newStatus?: LeadStatus;
@@ -35,11 +40,16 @@ export interface BusinessLead {
   phoneError?: string;
   city: string;
   address?: string;
+  coordinates?: {
+    lat: number;
+    lon: number;
+  };
   websiteStatus: WebsiteStatus;
   websiteUrl?: string;
   externalUrl?: string;
   externalId?: string;
-  source?: '2GIS' | 'MANUAL' | 'DEMO';
+  source?: LeadSource;
+  fetchedAt?: string;
   language: Language;
   customMessage?: string;
   status: LeadStatus;
@@ -54,12 +64,16 @@ export interface KazakhstanCity {
   name: string;
   nameKz: string;
   regionId: number;
+  bbox: [number, number, number, number]; // [south, west, north, east]
+  lat: number;
+  lon: number;
 }
 
 export interface BusinessCategoryOption {
   id: string;
   name: string;
-  query: string;
+  query: string; // 2GIS query
+  osmFilter?: string; // Overpass QL filter e.g. '["shop"="hairdresser"]'
 }
 
 export interface DiscoveredCompany {
@@ -68,6 +82,10 @@ export interface DiscoveredCompany {
   category: string;
   city: string;
   address: string;
+  coordinates?: {
+    lat: number;
+    lon: number;
+  };
   phoneRaw: string;
   phoneFormatted: string;
   isValidPhone: boolean;
@@ -75,5 +93,6 @@ export interface DiscoveredCompany {
   websiteStatus: WebsiteStatus;
   websiteUrl?: string;
   externalUrl?: string;
-  source: '2GIS';
+  source: '2GIS' | 'OSM';
+  fetchedAt: string;
 }
