@@ -139,7 +139,7 @@ export async function verifyTwoGisApiKey(apiKey: string): Promise<ApiKeyVerifica
 export async function searchTwoGisCompanies(
   options: TwoGisSearchOptions
 ): Promise<TwoGisSearchResult> {
-  const { apiKey, query, cityName, regionId, page = 1, pageSize = 20 } = options;
+  const { apiKey, query, cityName, regionId, page = 1, pageSize = 10 } = options;
 
   if (!apiKey || !apiKey.trim()) {
     return {
@@ -151,12 +151,15 @@ export async function searchTwoGisCompanies(
     };
   }
 
+  // 2GIS Catalog API 3.0 restricts page_size between 1 and 10 on Platform/Demo keys
+  const safePageSize = Math.max(1, Math.min(pageSize, 10));
+
   const baseUrl = getApiBaseUrl();
   const params = new URLSearchParams();
   params.set('q', query);
   params.set('key', apiKey.trim());
   params.set('page', String(page));
-  params.set('page_size', String(pageSize));
+  params.set('page_size', String(safePageSize));
   params.set(
     'fields',
     'items.contact_groups,items.address_name,items.rubrics,items.links,items.adm_div'

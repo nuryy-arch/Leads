@@ -53,7 +53,7 @@ export class TwoGisProvider implements LeadSearchProvider {
       cityName: query.city.name,
       regionId: query.city.regionId,
       query: queryText,
-      pageSize: query.limit || 50,
+      pageSize: Math.min(query.limit || 10, 10),
       page: 1,
     });
 

@@ -173,7 +173,7 @@ export async function searchOverpassCompanies(
 
     for (const endpoint of endpoints) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       try {
         const response = await fetch(endpoint, {
@@ -302,7 +302,7 @@ export async function searchOverpassCompanies(
       } catch (err: any) {
         clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
-          lastError = 'Превышен интервал ожидания ответа от OpenStreetMap (тайм-аут 20 секунд).';
+          lastError = 'Превышен интервал ожидания ответа от зеркала OpenStreetMap (тайм-аут 8 сек).';
         } else {
           lastError = `Сетевая ошибка при обращении к OpenStreetMap: ${err.message || 'Ошибка сети'}`;
         }
