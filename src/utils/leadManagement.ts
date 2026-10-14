@@ -105,13 +105,20 @@ export function convertDiscoveredToLead(
   };
 }
 
+export function escapeCsvValue(val: any): string {
+  if (val === null || val === undefined) return '""';
+  let str = String(val);
+  // Defense against CSV Formula Injection (CWE-1236)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 /**
- * Exports leads to CSV with UTF-8 BOM encoding for seamless Excel / Google Sheets compatibility
+ * Generates RFC 4180 compliant CSV string with UTF-8 BOM and formula injection protection
  */
-export function exportLeadsToCsv(
-  leads: BusinessLead[],
-  filename = `leads_export_${new Date().toISOString().slice(0, 10)}.csv`
-): void {
+export function generateCsvContent(leads: BusinessLead[]): string {
   const headers = [
     'ID',
     'Название компании',
@@ -133,12 +140,6 @@ export function exportLeadsToCsv(
     'Заметки',
     'Дата добавления в CRM',
   ];
-
-  const escapeCsv = (val: any): string => {
-    if (val === null || val === undefined) return '""';
-    const str = String(val).replace(/"/g, '""');
-    return `"${str}"`;
-  };
 
   const rows = leads.map((lead) => {
     let waLink = '';
@@ -175,11 +176,25 @@ export function exportLeadsToCsv(
       waLink,
       lead.notes || '',
       lead.createdAt,
-    ].map(escapeCsv).join(';');
+    ].map(escapeCsvValue).join(';');
   });
 
   // Include UTF-8 BOM so Russian & Kazakh Cyrillic characters open properly in MS Excel
-  const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(';'), ...rows].join('\r\n');
+  return '\uFEFF' + [headers.map(escapeCsvValue).join(';'), ...rows].join('\r\n');
+}
+
+/**
+ * Exports leads to CSV with UTF-8 BOM encoding for seamless Excel / Google Sheets compatibility
+ */
+export function exportLeadsToCsv(
+  leads: BusinessLead[],
+  filename = `leads_export_${new Date().toISOString().slice(0, 10)}.csv`
+): void {
+  const csvContent = generateCsvContent(leads);
+
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return;
+  }
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

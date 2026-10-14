@@ -139,4 +139,42 @@ describe('File Import & Branch Deduplication (src/utils/fileImport.ts)', () => {
     expect(summary.rows[3].status).toBe('ERROR');
     expect(summary.rows[3].included).toBe(false);
   });
+
+  it('escapes CSV Formula Injection characters (=, +, -, @) upon export', async () => {
+    const { generateCsvContent, escapeCsvValue } = await import('./leadManagement');
+
+    expect(escapeCsvValue('=cmd|’ /C calc’!A0')).toBe("\"'=cmd|’ /C calc’!A0\"");
+    expect(escapeCsvValue('+SUM(1+1)')).toBe("\"'+SUM(1+1)\"");
+    expect(escapeCsvValue('-10% Discount')).toBe("\"'-10% Discount\"");
+    expect(escapeCsvValue('@malicious.site')).toBe("\"'@malicious.site\"");
+    expect(escapeCsvValue('\tleadingTab')).toBe("\"'\tleadingTab\"");
+
+    const maliciousLeads: BusinessLead[] = [
+      {
+        id: 'lead-formula',
+        businessName: '=cmd|’ /C calc’!A0',
+        category: '+SUM(1+1)',
+        city: '-10% Discount',
+        address: '@malicious.site',
+        phoneRaw: '+7 777 000-00-00',
+        phoneFormatted: '77770000000',
+        isValidPhone: true,
+        websiteStatus: 'NO_WEBSITE_LISTED',
+        language: 'ru',
+        status: 'NEW',
+        history: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    const csvOutput = generateCsvContent(maliciousLeads);
+
+    // Verify values starting with =, +, -, @ are escaped with leading single quote
+    expect(csvOutput).toContain("\"'=cmd|’ /C calc’!A0\"");
+    expect(csvOutput).toContain("\"'+SUM(1+1)\"");
+    expect(csvOutput).toContain("\"'-10% Discount\"");
+    expect(csvOutput).toContain("\"'@malicious.site\"");
+  });
 });
+

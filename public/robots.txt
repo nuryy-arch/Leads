@@ -1,0 +1,4 @@
+# Lead Hunter Kazakhstan
+# Private CRM Application - Disallow all crawlers
+User-agent: *
+Disallow: /
