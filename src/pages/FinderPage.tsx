@@ -58,6 +58,7 @@ export const FinderPage: React.FC<FinderPageProps> = ({
   const [selectedCity, setSelectedCity] = useState<KazakhstanCity>(KAZAKHSTAN_CITIES[0]);
   const [selectedCategory, setSelectedCategory] = useState(BUSINESS_CATEGORIES[0].query);
   const [customQuery, setCustomQuery] = useState('');
+  const [searchLimit, setSearchLimit] = useState<number>(100);
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<DiscoveredCompany[]>([]);
   const [providerStatuses, setProviderStatuses] = useState<ProviderSearchStatus[]>([]);
@@ -110,7 +111,7 @@ export const FinderPage: React.FC<FinderPageProps> = ({
           categoryQuery: queryToUse,
           osmFilter,
           customQuery: customQuery.trim() || undefined,
-          limit: 50,
+          limit: searchLimit,
           providers: Array.from(selectedProviders),
         },
         existingLeads,
@@ -128,14 +129,17 @@ export const FinderPage: React.FC<FinderPageProps> = ({
       setFetchedAtTime(new Date().toLocaleTimeString('ru-RU'));
       setSearchDurationMs(result.durationMs);
 
+      const targetLocation =
+        selectedCity.id === 'all_kz' ? 'всему Казахстану' : `г. ${selectedCity.name}`;
+
       if (result.companies.length === 0) {
-        onShowToast(`По запросу «${queryToUse}» в г. ${selectedCity.name} организаций не найдено`, 'info');
+        onShowToast(`По запросу «${queryToUse}» по ${targetLocation} организаций не найдено`, 'info');
       } else {
         const mergedNote = result.stats.mergedCrossSource > 0
           ? ` (${result.stats.mergedCrossSource} объединено из разных источников)`
           : '';
         onShowToast(
-          `Найдено ${result.companies.length} компаний в г. ${selectedCity.name}${mergedNote}`,
+          `Найдено ${result.companies.length} компаний по ${targetLocation}${mergedNote}`,
           'success'
         );
       }
@@ -415,6 +419,24 @@ export const FinderPage: React.FC<FinderPageProps> = ({
             />
           </div>
 
+          {/* Limit Selector */}
+          <div className="toolbar-field" style={{ minWidth: 120 }}>
+            <label className="toolbar-label">
+              <Sparkles size={14} />
+              <span>Лимит лидов</span>
+            </label>
+            <select
+              className="select-custom w-full"
+              value={searchLimit}
+              onChange={(e) => setSearchLimit(Number(e.target.value))}
+            >
+              <option value={10}>10 лидов (быстро)</option>
+              <option value={50}>50 лидов (5 страниц)</option>
+              <option value={100}>100 лидов (10 страниц)</option>
+              <option value={200}>200 лидов (макс.)</option>
+            </select>
+          </div>
+
           {/* Search Button / Cancel Button */}
           <div className="toolbar-field submit-field">
             {isLoading ? (
@@ -443,7 +465,11 @@ export const FinderPage: React.FC<FinderPageProps> = ({
                 }}
               >
                 <Search size={16} />
-                <span>Искать в {selectedCity.name}</span>
+                <span>
+                  {selectedCity.id === 'all_kz'
+                    ? `Искать по всему Казахстану (до ${searchLimit})`
+                    : `Искать в ${selectedCity.name} (до ${searchLimit})`}
+                </span>
               </button>
             )}
           </div>

@@ -1,6 +1,18 @@
 import type { BusinessCategoryOption, KazakhstanCity } from '../types';
+export const ALL_KZ_CITY_ID = 'all_kz';
+
+export const ALL_KZ_CITY: KazakhstanCity = {
+  id: ALL_KZ_CITY_ID,
+  name: 'Весь Казахстан (все города)',
+  nameKz: 'Бүкіл Қазақстан',
+  regionId: 0,
+  bbox: [40.5, 46.5, 55.5, 87.5],
+  lat: 48.0196,
+  lon: 66.9237,
+};
 
 export const KAZAKHSTAN_CITIES: KazakhstanCity[] = [
+  ALL_KZ_CITY,
   {
     id: 'almaty',
     name: 'Алматы',

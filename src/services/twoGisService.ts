@@ -10,6 +10,7 @@ export interface TwoGisSearchOptions {
   regionId?: number;
   page?: number;
   pageSize?: number;
+  sort?: string;
 }
 
 export interface TwoGisSearchResult {
@@ -139,7 +140,7 @@ export async function verifyTwoGisApiKey(apiKey: string): Promise<ApiKeyVerifica
 export async function searchTwoGisCompanies(
   options: TwoGisSearchOptions
 ): Promise<TwoGisSearchResult> {
-  const { apiKey, query, cityName, regionId, page = 1, pageSize = 10 } = options;
+  const { apiKey, query, cityName, regionId, page = 1, pageSize = 10, sort } = options;
 
   if (!apiKey || !apiKey.trim()) {
     return {
@@ -167,6 +168,10 @@ export async function searchTwoGisCompanies(
 
   if (regionId) {
     params.set('region_id', String(regionId));
+  }
+
+  if (sort) {
+    params.set('sort', sort);
   }
 
   const url = `${baseUrl}?${params.toString()}`;

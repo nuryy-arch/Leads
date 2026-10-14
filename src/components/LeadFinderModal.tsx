@@ -22,9 +22,9 @@ import {
 import type { BusinessLead, DiscoveredCompany, KazakhstanCity, SearchProvider } from '../types';
 import { KAZAKHSTAN_CITIES, BUSINESS_CATEGORIES } from '../data/kazakhstanData';
 import {
-  searchTwoGisCompanies,
   getStoredTwoGisApiKey,
 } from '../services/twoGisService';
+import { twoGisProvider } from '../services/providers/twoGisProvider';
 import { searchOverpassCompanies } from '../services/overpassService';
 import { isDuplicateLead, convertDiscoveredToLead } from '../utils/leadManagement';
 import { formatPhoneForDisplay } from '../utils/whatsapp';
@@ -81,16 +81,16 @@ export const LeadFinderModal: React.FC<LeadFinderModalProps> = ({
       }
 
       try {
-        const result = await searchTwoGisCompanies({
-          apiKey,
-          query: queryToUse,
-          cityName: selectedCity.name,
-          regionId: selectedCity.regionId,
-          page: 1,
-          pageSize: 50,
+        const result = await twoGisProvider.search({
+          city: selectedCity,
+          categoryQuery: queryToUse,
+          customQuery: customQuery.trim() || undefined,
+          limit: 100,
+          providers: ['2GIS'],
+          forceRefresh,
         });
 
-        if (result.error) {
+        if (result.error && result.companies.length === 0) {
           setSearchError(result.error);
           setSearchResults([]);
           setTotalFound(0);
