@@ -96,7 +96,7 @@ export async function verifyTwoGisApiKey(apiKey: string): Promise<ApiKeyVerifica
   }
 
   const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}?q=test&key=${encodeURIComponent(trimmed)}&page_size=1`;
+  const url = `${baseUrl}?q=${encodeURIComponent('кафе')}&region_id=161&key=${encodeURIComponent(trimmed)}&page_size=1`;
 
   try {
     const response = await fetch(url, {
@@ -108,7 +108,7 @@ export async function verifyTwoGisApiKey(apiKey: string): Promise<ApiKeyVerifica
 
     const data = await response.json();
 
-    if (response.ok && data?.meta?.code === 200) {
+    if (data?.meta?.code === 200 || data?.meta?.error?.type === 'itemNotFound') {
       return {
         isValid: true,
         message: 'Ключ 2GIS API успешно проверен и активен!',
